@@ -26,12 +26,14 @@ impl VehicleAgent {
         let role_name = role_name.to_string();
         let sub_outdir: &'static Path = Box::leak(Box::new(sub_outdir));
 
+        // Create a vehicle
         let vehicle = world
             .actor_builder("vehicle.tesla.model3")?
             .set_attribute("role_name", &role_name)?
             .spawn_vehicle(spawn_point)?;
         vehicle.set_autopilot(true);
 
+        // Create a lidar sensor
         let lidar_pose = Isometry3 {
             rotation: UnitQuaternion::from_euler_angles(0.0, 0.0, 0.0),
             translation: Translation3::new(0.0, 0.0, 1.6),
@@ -44,13 +46,15 @@ impl VehicleAgent {
             .set_attribute("range", "20")?
             .spawn_sensor_opt(&lidar_pose, Some(&vehicle), None)?;
 
+        // Register a callback on the lidar. Whenever the callback is
+        // called, that is, a lidar scan is ready, it publishes a
+        // message to the aggregator.
         {
             let role_name = role_name.clone();
             let lidar_clone = lidar.clone();
             let mut frame_counter = 0..;
 
             lidar.listen(move |measure| {
-                use flume::TrySendError as E;
                 let measure: SemanticLidarMeasurement = measure.try_into().unwrap();
                 let msg = LidarMessage {
                     frame_id: frame_counter.next().unwrap(),
@@ -59,6 +63,7 @@ impl VehicleAgent {
                     sub_outdir,
                 };
 
+                use flume::TrySendError as E;
                 match lidar_tx.try_send(msg) {
                     Ok(_) => (),
                     Err(E::Disconnected(_)) => lidar_clone.stop(),

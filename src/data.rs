@@ -1,6 +1,7 @@
 use carla::{geom::Location, sensor::data::SemanticLidarDetection};
 use pcd_rs::PcdSerialize;
 
+/// The point type that is written to the .pcd file.
 #[derive(PcdSerialize)]
 pub struct PcdPoint {
     pub x: f32,

@@ -3,7 +3,11 @@ use anyhow::Result;
 use pcd_rs::{DataKind, WriterInit};
 use rayon::prelude::*;
 
+/// The aggregator consumes lidar scan messages from multiple vehicles
+/// and dump them into .pcd files.
 pub fn run_aggregator(lidar_rx: flume::Receiver<LidarMessage>) -> Result<()> {
+    // Use .par_bridge() to turn the iterator of msgs to the parallel
+    // .try_for_each() processor.
     lidar_rx
         .into_iter()
         .par_bridge()
@@ -11,6 +15,10 @@ pub fn run_aggregator(lidar_rx: flume::Receiver<LidarMessage>) -> Result<()> {
     Ok(())
 }
 
+/// The function processes a single lidar message.
+///
+/// It converts the points in the message and dump them to a .pcd
+/// file.
 fn process_msg(msg: LidarMessage) -> Result<()> {
     let LidarMessage {
         measure,

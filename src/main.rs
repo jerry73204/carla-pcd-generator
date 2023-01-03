@@ -89,9 +89,8 @@ fn main() -> Result<()> {
     let (spawn_points, _) = spawn_points.partial_shuffle(&mut rng, n_cars);
 
     // Start data aggregator
-    let (pcd_tx, pcd_rx) = flume::bounded(n_cars * 2);
-
-    let _aggregator = thread::spawn(move || aggregator::run_aggregator(pcd_rx));
+    let (lidar_tx, lidar_rx) = flume::bounded(n_cars * 2);
+    let _aggregator = thread::spawn(move || aggregator::run_aggregator(lidar_rx));
 
     // Spawn vehicles
     let _vehicles: Vec<VehicleAgent> = spawn_points
@@ -106,7 +105,7 @@ fn main() -> Result<()> {
                 &mut world,
                 &role_name,
                 spawn_point,
-                pcd_tx.clone(),
+                lidar_tx.clone(),
                 sub_outdir,
             )?;
             info!("Spawned vehicle {role_name}");
@@ -114,9 +113,19 @@ fn main() -> Result<()> {
         })
         .try_collect()?;
 
-    drop(pcd_tx);
+    // Drop the sender that is no longer used.
+    drop(lidar_tx);
 
-    loop {
+    // Tick the simulator forever
+    info!("Simulation started");
+
+    for index in 0.. {
+        if index % 100 == 0 {
+            info!("Ticked {} frames", index);
+        }
+
         world.tick();
     }
+
+    Ok(())
 }
