@@ -1,0 +1,19 @@
+[package]
+name = "carla-pcd-generator"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.68"
+carla = "0.8.0"
+clap = { version = "4.0.32", features = ["derive"] }
+flume = "0.10.14"
+itertools = "0.10.5"
+nalgebra = "0.31.4"
+pcd-rs = { version = "0.10.0", features = ["derive"] }
+rand = "0.8.5"
+rayon = "1.6.1"
+tracing = "0.1.37"
+tracing-subscriber = "0.3.16"
