@@ -1,6 +1,6 @@
 # Multi-Vehicle Lidar Point Cloud Generator
 
-This project simulator point cloud streams on multiple vehicles using
+This project simulates point cloud streams on multiple vehicles using
 [Carla simulator](https://github.com/carla-simulator/carla).
 
 Supported Carla version is 0.9.14.
