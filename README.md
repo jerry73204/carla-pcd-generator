@@ -5,6 +5,8 @@ This project simulator point cloud streams on multiple vehicles using
 
 Supported Carla version is 0.9.14.
 
+![image](doc/demo.png)
+
 ## Usage
 
 ```bash
