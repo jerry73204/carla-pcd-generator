@@ -25,14 +25,25 @@ use tracing::{info, warn};
 
 #[derive(Parser)]
 struct Opts {
+    /// Carla server address.
     #[clap(long, default_value = "127.0.0.1")]
     pub carla_host: String,
+
+    /// Carla server port.
     #[clap(long, default_value = "2000")]
     pub carla_port: u16,
+
+    /// Load the map if specified.
     #[clap(long)]
     pub map: Option<String>,
+
+    /// Number of vehicles.
     #[clap(long, default_value = "1")]
     pub n_cars: NonZeroUsize,
+
+    /// Output directory to store point cloud files.
+    ///
+    /// The directory must not exist.
     #[clap(short, long)]
     pub output_dir: PathBuf,
 }
@@ -45,9 +56,9 @@ fn main() -> Result<()> {
     let opts = Opts::parse();
 
     // Prepare files and dirs
-    fs::create_dir_all(&opts.output_dir).with_context(|| {
+    fs::create_dir(&opts.output_dir).with_context(|| {
         format!(
-            "output directory '{}' already exists",
+            "Unable to create output directory '{}'",
             opts.output_dir.display()
         )
     })?;
@@ -106,7 +117,7 @@ fn main() -> Result<()> {
     let _vehicles: Vec<VehicleAgent> = spawn_points
         .iter()
         .enumerate()
-        .map(|(index, spawn_point)| {
+        .map(|(index, spawn_point)| -> Result<_> {
             let role_name = format!("car_{:03}", index + 1);
             let sub_outdir = opts.output_dir.join(&role_name);
             fs::create_dir(&sub_outdir)?;
