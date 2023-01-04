@@ -1,6 +1,9 @@
 mod aggregator;
 mod config;
 mod data;
+mod gui;
+mod hack;
+mod looper;
 mod message;
 mod vehicle;
 
@@ -19,7 +22,7 @@ use std::{
         Arc,
     },
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 use tracing::{info, warn};
 
@@ -109,12 +112,15 @@ fn main() -> Result<()> {
     // Shuffle spawn points
     let (spawn_points, _) = spawn_points.partial_shuffle(&mut rng, n_cars);
 
+    // Create channels
+    let (lidar_tx, lidar_rx) = flume::bounded(n_cars);
+    let (gui_tx, gui_rx) = flume::bounded(n_cars);
+
     // Start data aggregator
-    let (lidar_tx, lidar_rx) = flume::bounded(n_cars * 2);
-    let _aggregator = thread::spawn(move || aggregator::run_aggregator(lidar_rx));
+    let aggregator = thread::spawn(move || aggregator::run_aggregator(lidar_rx));
 
     // Spawn vehicles
-    let _vehicles: Vec<VehicleAgent> = spawn_points
+    let vehicles: Vec<VehicleAgent> = spawn_points
         .iter()
         .enumerate()
         .map(|(index, spawn_point)| -> Result<_> {
@@ -127,6 +133,7 @@ fn main() -> Result<()> {
                 &role_name,
                 spawn_point,
                 lidar_tx.clone(),
+                gui_tx.clone(),
                 sub_outdir,
             )?;
             info!("Spawned vehicle {role_name}");
@@ -136,6 +143,7 @@ fn main() -> Result<()> {
 
     // Drop the sender that is no longer used.
     drop(lidar_tx);
+    drop(gui_tx);
 
     // Set Ctrl-C handler
     let is_terminated = Arc::new(AtomicBool::new(false));
@@ -146,23 +154,22 @@ fn main() -> Result<()> {
         })?;
     }
 
-    // Tick the simulator forever
+    // Run the looper that ticks the simulator
     info!("Simulation started");
-    let mut since = Instant::now();
+    let looper = {
+        let is_terminated = is_terminated.clone();
+        thread::spawn(move || looper::run_looper(world, &is_terminated))
+    };
 
-    for frame_id in 0.. {
-        if is_terminated.load(SeqCst) {
-            warn!("User interrupted");
-            break;
-        }
+    // Run GUI. Windows and Mac OSX restricts that GUI must run in
+    // main thread.  Hence, the GUI is launched in main() without
+    // putting it into a thread.
+    gui::run_gui(gui_rx, is_terminated);
 
-        if since.elapsed() >= Duration::from_secs(10) {
-            info!("Ticked {} frames", frame_id + 1);
-            since = Instant::now();
-        }
-
-        world.tick();
-    }
+    // Finalize
+    drop(vehicles);
+    aggregator.join().unwrap()?;
+    looper.join().unwrap();
 
     Ok(())
 }

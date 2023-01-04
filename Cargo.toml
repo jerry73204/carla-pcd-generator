@@ -11,8 +11,11 @@ carla = "0.8.0"
 clap = { version = "4.0.32", features = ["derive"] }
 ctrlc = "3.2.4"
 flume = "0.10.14"
+fxhash = "0.2.1"
 itertools = "0.10.5"
+kiss3d = "0.35.0"
 nalgebra = "0.31.4"
+palette = "0.6.1"
 pcd-rs = { version = "0.10.0", features = ["derive"] }
 rand = "0.8.5"
 rayon = "1.6.1"
