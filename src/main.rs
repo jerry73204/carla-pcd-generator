@@ -10,7 +10,17 @@ use carla::{client::Client, rpc::EpisodeSettings};
 use clap::Parser;
 use itertools::Itertools;
 use rand::prelude::*;
-use std::{fs, num::NonZeroUsize, path::PathBuf, thread, time::Duration};
+use std::{
+    fs,
+    num::NonZeroUsize,
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering::*},
+        Arc,
+    },
+    thread,
+    time::{Duration, Instant},
+};
 use tracing::{info, warn};
 
 #[derive(Parser)]
@@ -109,19 +119,35 @@ fn main() -> Result<()> {
                 sub_outdir,
             )?;
             info!("Spawned vehicle {role_name}");
-            anyhow::Ok(vehicle)
+            Ok(vehicle)
         })
         .try_collect()?;
 
     // Drop the sender that is no longer used.
     drop(lidar_tx);
 
+    // Set Ctrl-C handler
+    let is_terminated = Arc::new(AtomicBool::new(false));
+    {
+        let is_terminated = is_terminated.clone();
+        ctrlc::set_handler(move || {
+            is_terminated.store(true, SeqCst);
+        })?;
+    }
+
     // Tick the simulator forever
     info!("Simulation started");
+    let mut since = Instant::now();
 
-    for index in 0.. {
-        if index % 100 == 0 {
-            info!("Ticked {} frames", index);
+    for frame_id in 0.. {
+        if is_terminated.load(SeqCst) {
+            warn!("User interrupted");
+            break;
+        }
+
+        if since.elapsed() >= Duration::from_secs(10) {
+            info!("Ticked {} frames", frame_id + 1);
+            since = Instant::now();
         }
 
         world.tick();

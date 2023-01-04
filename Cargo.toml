@@ -9,6 +9,7 @@ edition = "2021"
 anyhow = "1.0.68"
 carla = "0.8.0"
 clap = { version = "4.0.32", features = ["derive"] }
+ctrlc = "3.2.4"
 flume = "0.10.14"
 itertools = "0.10.5"
 nalgebra = "0.31.4"
