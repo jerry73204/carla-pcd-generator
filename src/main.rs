@@ -1,5 +1,6 @@
 mod aggregator;
 mod config;
+mod consts;
 mod data;
 mod gui;
 mod hack;
@@ -7,7 +8,7 @@ mod looper;
 mod message;
 mod vehicle;
 
-use crate::vehicle::VehicleAgent;
+use crate::{config::Config, consts::DEFAULT_CONFIG, vehicle::VehicleAgent};
 use anyhow::{Context, Result};
 use carla::{client::Client, rpc::EpisodeSettings};
 use clap::Parser;
@@ -44,6 +45,10 @@ struct Opts {
     #[clap(long, default_value = "1")]
     pub n_cars: NonZeroUsize,
 
+    /// Configuration file.
+    #[clap(long)]
+    pub config: Option<PathBuf>,
+
     /// Output directory to store point cloud files.
     ///
     /// The directory must not exist.
@@ -57,6 +62,14 @@ fn main() -> Result<()> {
 
     // Parse command line arguments
     let opts = Opts::parse();
+    let config: &'static Config = match &opts.config {
+        Some(path) => {
+            let text = fs::read_to_string(path)?;
+            let config: Config = json5::from_str(&text)?;
+            Box::leak(Box::new(config))
+        }
+        None => &DEFAULT_CONFIG,
+    };
 
     // Prepare files and dirs
     fs::create_dir(&opts.output_dir).with_context(|| {
@@ -129,6 +142,7 @@ fn main() -> Result<()> {
             fs::create_dir(&sub_outdir)?;
 
             let vehicle = VehicleAgent::new(
+                config,
                 &mut world,
                 &role_name,
                 spawn_point,

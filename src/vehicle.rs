@@ -1,4 +1,7 @@
-use crate::message::{GuiMessage, LidarMessage};
+use crate::{
+    config::Config,
+    message::{GuiMessage, LidarMessage},
+};
 use anyhow::Result;
 use carla::{
     client::{ActorBase, Sensor, Vehicle, World},
@@ -20,6 +23,7 @@ pub struct VehicleAgent {
 
 impl VehicleAgent {
     pub fn new(
+        config: &Config,
         world: &mut World,
         role_name: &str,
         spawn_point: &Isometry3<f32>,
@@ -40,14 +44,17 @@ impl VehicleAgent {
         // Create a lidar sensor
         let lidar_pose = Isometry3 {
             rotation: UnitQuaternion::from_euler_angles(0.0, 0.0, 0.0),
-            translation: Translation3::new(0.0, 0.0, 1.6),
+            translation: Translation3::new(0.0, 0.0, config.lidar.height_m),
         };
         let lidar = world
             .actor_builder("sensor.lidar.ray_cast_semantic")?
-            .set_attribute("channels", "32")?
+            .set_attribute("channels", &config.lidar.n_channels.to_string())?
             .set_attribute("points_per_second", "90000")?
-            .set_attribute("rotation_frequency", "40")?
-            .set_attribute("range", "20")?
+            .set_attribute(
+                "rotation_frequency",
+                &config.lidar.rotation_freq.to_string(),
+            )?
+            .set_attribute("range", &config.lidar.range_m.to_string())?
             .spawn_sensor_opt(&lidar_pose, Some(&vehicle), None)?;
 
         // Register a callback on the lidar. Whenever the callback is
